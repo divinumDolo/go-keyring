@@ -19,7 +19,7 @@ func TestMockGet(t *testing.T) {
 		t.Errorf("Should not fail, got: %s", err)
 	}
 
-	pw, err := mp.Get(service, user)
+	pw, err := mp.Get(user)
 	if err != nil {
 		t.Errorf("Should not fail, got: %s", err)
 	}
@@ -32,8 +32,9 @@ func TestMockGet(t *testing.T) {
 // TestGetNonExisting tests getting a secret not in the keyring.
 func TestMockGetNonExisting(t *testing.T) {
 	mp := mockProvider{}
-
-	_, err := mp.Get(service, user+"fake")
+	argsTemp = append(user, "fake_attr")
+	argsTemp = append(argsTemp, "fake_attr_val")
+	_, err := mp.Get(argsTemp)
 	if err != ErrNotFound {
 		t.Errorf("Expected error ErrNotFound, got %s", err)
 	}
@@ -48,7 +49,7 @@ func TestMockDelete(t *testing.T) {
 		t.Errorf("Should not fail, got: %s", err)
 	}
 
-	err = mp.Delete(service, user)
+	err = mp.Delete( user)
 	if err != nil {
 		t.Errorf("Should not fail, got: %s", err)
 	}
@@ -57,8 +58,10 @@ func TestMockDelete(t *testing.T) {
 // TestDeleteNonExisting tests deleting a secret not in the keyring.
 func TestMockDeleteNonExisting(t *testing.T) {
 	mp := mockProvider{}
-
-	err := mp.Delete(service, user+"fake")
+	argsTemp = append(user, "fake_attr")
+	argsTemp = append(argsTemp, "fake_attr_val")
+	
+	err := mp.Delete(argsTemp)
 	if err != ErrNotFound {
 		t.Errorf("Expected error ErrNotFound, got %s", err)
 	}

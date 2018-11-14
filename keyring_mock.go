@@ -1,40 +1,37 @@
 package keyring
-
+import "strings"
 type mockProvider struct {
-	mockStore map[string]map[string]string
+	mockStore map[string]string
 }
 
-// Set stores user and pass in the keyring under the defined service
+// Set stores args and pass in the keyring under the defined label
 // name.
-func (m *mockProvider) Set(service, user, pass string) error {
+func (m *mockProvider) Set(label string, args []string, pass string) error {
 	if m.mockStore == nil {
-		m.mockStore = make(map[string]map[string]string)
+		m.mockStore = make(map[string]string)
 	}
-	if m.mockStore[service] == nil {
-		m.mockStore[service] = make(map[string]string)
-	}
-	m.mockStore[service][user] = pass
+	
+	keyValuePairs := strings.Join(args, " ")
+	m.mockStore[keyValuePairs] = pass
 	return nil
 }
 
-// Get gets a secret from the keyring given a service name and a user.
-func (m *mockProvider) Get(service, user string) (string, error) {
-	if b, ok := m.mockStore[service]; ok {
-		if v, ok := b[user]; ok {
-			return v, nil
-		}
+// Get gets a secret from the keyring given  args.
+func (m *mockProvider) Get(args []string) (string, error) {
+	keyValuePairs := strings.Join(args, " ")
+	if b, ok := m.mockStore[keyValuePairs]; ok {
+			return b, nil
 	}
 	return "", ErrNotFound
 }
 
-// Delete deletes a secret, identified by service & user, from the keyring.
-func (m *mockProvider) Delete(service, user string) error {
+// Delete deletes a secret, identified by args, from the keyring.
+func (m *mockProvider) Delete(args []string) error {
+	keyValuePairs := strings.Join(args, " ")
 	if m.mockStore != nil {
-		if _, ok := m.mockStore[service]; ok {
-			if _, ok := m.mockStore[service][user]; ok {
-				delete(m.mockStore[service], user)
+		if _, ok := m.mockStore[keyValuePairs]; ok {
+				delete(m.mockStore,keyValuePairs)
 				return nil
-			}
 		}
 	}
 	return ErrNotFound

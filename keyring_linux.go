@@ -1,16 +1,15 @@
 package keyring
 
 import (
-	"fmt"
+	"strings"
 	"github.com/godbus/dbus"
-	"github.com/zalando/go-keyring/secret_service"
+	"github.com/divinumDolo/go-keyring/secret_service"
 )
 
 type secretServiceProvider struct{}
 
-// Set stores user and pass in the keyring under the defined service
-// name.
-func (s secretServiceProvider) Set(service, user, pass string) error {
+// Set stores args and pass in the keyring under the defined label
+func (s secretServiceProvider) Set(label string, args []string, pass string) error {
 	svc, err := ss.NewSecretService()
 	if err != nil {
 		return err
@@ -23,11 +22,10 @@ func (s secretServiceProvider) Set(service, user, pass string) error {
 	}
 	defer svc.Close(session)
 
-	attributes := map[string]string{
-		"username": user,
-		"service":  service,
+	var attributes = make(map[string]string)
+	for i:=0 ;i < len(args);i=i+2{
+		attributes[args[i]] = args[i+1]
 	}
-
 	secret := ss.NewSecret(session.Path(), pass)
 
 	collection := svc.GetLoginCollection()
@@ -37,9 +35,7 @@ func (s secretServiceProvider) Set(service, user, pass string) error {
 		return err
 	}
 
-	err = svc.CreateItem(collection,
-		fmt.Sprintf("Password for '%s' on '%s'", user, service),
-		attributes, secret)
+	err = svc.CreateItem(collection, label, attributes, secret)
 	if err != nil {
 		return err
 	}
@@ -47,40 +43,49 @@ func (s secretServiceProvider) Set(service, user, pass string) error {
 	return nil
 }
 
-// findItem looksup an item by service and user.
-func (s secretServiceProvider) findItem(svc *ss.SecretService, service, user string) (dbus.ObjectPath, error) {
+// findItem looksup an item by args and user.
+//searches in two formats
+func (s secretServiceProvider) findItem(svc *ss.SecretService, args []string) (dbus.ObjectPath, error) {
 	collection := svc.GetLoginCollection()
-
-	search := map[string]string{
-		"username": user,
-		"service":  service,
+	var search = make(map[string]string)
+	for i:=0 ;i < len(args);i=i+2{
+		search[args[i]] = args[i+1]
 	}
 
+	searchOld := map[string]string{
+		"username": strings.Join(args," "),
+	}
 	err := svc.Unlock(collection.Path())
 	if err != nil {
 		return "", err
 	}
 
 	results, err := svc.SearchItems(collection, search)
+	results2, err2 := svc.SearchItems(collection, searchOld)
+
 	if err != nil {
 		return "", err
 	}
-
-	if len(results) == 0 {
-		return "", ErrNotFound
+	if err2 != nil {
+		return "", err2
 	}
-
-	return results[0], nil
+	if ( len(results) != 0 ){
+		return results[0], nil
+	}
+	if ( len(results2) != 0 ){
+		return results2[0], nil
+	}
+	return "", ErrNotFound
 }
 
-// Get gets a secret from the keyring given a service name and a user.
-func (s secretServiceProvider) Get(service, user string) (string, error) {
+// Get gets a secret from the keyring given the args.
+func (s secretServiceProvider) Get(args []string) (string, error) {
 	svc, err := ss.NewSecretService()
 	if err != nil {
 		return "", err
 	}
 
-	item, err := s.findItem(svc, service, user)
+	item, err := s.findItem(svc, args)
 	if err != nil {
 		return "", err
 	}
@@ -100,14 +105,14 @@ func (s secretServiceProvider) Get(service, user string) (string, error) {
 	return string(secret.Value), nil
 }
 
-// Delete deletes a secret, identified by service & user, from the keyring.
-func (s secretServiceProvider) Delete(service, user string) error {
+// Delete deletes a secret, identified by args, from the keyring.
+func (s secretServiceProvider) Delete(args []string) error {
 	svc, err := ss.NewSecretService()
 	if err != nil {
 		return err
 	}
 
-	item, err := s.findItem(svc, service, user)
+	item, err := s.findItem(svc, args)
 	if err != nil {
 		return err
 	}

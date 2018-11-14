@@ -3,14 +3,15 @@ package keyring
 import "testing"
 
 const (
-	service  = "test-service"
-	user     = "test-user"
+	label  = "test-label"
+	args []string     = {"attr1", "attr1_val", "attr2", "attr2_val"}
+	args_fake []string     = {"attr1", "attr1_val", "attr2", "attr2_val", "fake_attr", "fake_attr_val"}
 	password = "test-password"
 )
 
-// TestSet tests setting a user and password in the keyring.
+// TestSet tests setting a args and password in the keyring.
 func TestSet(t *testing.T) {
-	err := Set(service, user, password)
+	err := Set(label, args, password)
 	if err != nil {
 		t.Errorf("Should not fail, got: %s", err)
 	}
@@ -18,12 +19,12 @@ func TestSet(t *testing.T) {
 
 // TestGet tests getting a password from the keyring.
 func TestGet(t *testing.T) {
-	err := Set(service, user, password)
+	err := Set(label, args, password)
 	if err != nil {
 		t.Errorf("Should not fail, got: %s", err)
 	}
 
-	pw, err := Get(service, user)
+	pw, err := Get(args)
 	if err != nil {
 		t.Errorf("Should not fail, got: %s", err)
 	}
@@ -35,7 +36,7 @@ func TestGet(t *testing.T) {
 
 // TestGetNonExisting tests getting a secret not in the keyring.
 func TestGetNonExisting(t *testing.T) {
-	_, err := Get(service, user+"fake")
+	_, err := Get(args_fake)
 	if err != ErrNotFound {
 		t.Errorf("Expected error ErrNotFound, got %s", err)
 	}
@@ -43,7 +44,7 @@ func TestGetNonExisting(t *testing.T) {
 
 // TestDelete tests deleting a secret from the keyring.
 func TestDelete(t *testing.T) {
-	err := Delete(service, user)
+	err := Delete(args)
 	if err != nil {
 		t.Errorf("Should not fail, got: %s", err)
 	}
@@ -51,7 +52,7 @@ func TestDelete(t *testing.T) {
 
 // TestDeleteNonExisting tests deleting a secret not in the keyring.
 func TestDeleteNonExisting(t *testing.T) {
-	err := Delete(service, user+"fake")
+	err := Delete(args_fake)
 	if err != ErrNotFound {
 		t.Errorf("Expected error ErrNotFound, got %s", err)
 	}
